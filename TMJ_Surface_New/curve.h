@@ -7,6 +7,7 @@
 #define EPS         1e-6        /* data type is float */
 #define RES			16
 #define SNUM		21
+#define MV_num 11  //Piece that one slice divided 
 
 typedef float REAL;
 
@@ -49,11 +50,11 @@ public:
 	CubicBezierCurve cur[4];          //one slice boundary consists of 4 curves
 
 	/*Assignment from SliceBoundary::SetMaxz()*/
-	Point3 maxz_vertex[5];
+	Point3 maxz_vertex[MV_num];
 	CubicBezierCurve cur_maxz[2];
 	
 	/*Assignment from SliceBoundary::SetMinz*/
-	Point3 minz_vertex[5];
+	Point3 minz_vertex[MV_num];
 	CubicBezierCurve cur_minz[2];
 
 	REAL ymin, ymax, zmin, zmax;      //draw the bound box 
@@ -88,7 +89,8 @@ public:
 	/*Calculate interval*/
 	Point3 max_x; 
 	Point3 min_x;
-	REAL interval,fx, fy, fz;
+	REAL interval;
+	REAL divide_y;
 
 	/*Slice information*/
 	SliceBoundary cur_slice; /*noused*/
@@ -97,12 +99,13 @@ public:
 	BicubicBezierSurface maxz_sur[4][2];  //Assignement from SetSurface()
 	BicubicBezierSurface minz_sur[4][2];  //Assignement from SetSurface()
 
-	void InitModel(char *filename, float fx, float fy, float fz);
+	void SetInfo(char *filename);
+	void InitModel(char *filename, bool divide);
 	void DrawModel();
-	
+
 	/*Set slice's inter-vertex number, index, cur_x*/
 	void SetSlice();   
-	void Divide_SetSlice(REAL y, bool upy);
+	void Divide_SetSlice(bool upy, REAL* FT_inter);
 	
 	/*Draw all slice's bezier curve*/
 	void DrawSliceCurve(int index, int slice_i);  

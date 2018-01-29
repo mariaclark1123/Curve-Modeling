@@ -28,6 +28,8 @@ void PRINT_CTRLPTS(CubicBezierCurve* crv) {
 }
 #endif
 
+REAL move_x = 0, move_y = 0, move_z = 0;
+
 /*Cubic Bezier Curve*/
 void CubicBezierCurve::EvaluateCurve2D(const REAL t, Point2 value)
 {
@@ -220,68 +222,179 @@ void BicubicBezierSurface::DrawSurface3D()
 }
 
 /*Model*/
-void Model::InitModel(char *filename, float fx, float fy, float fz)
+void Model::SetInfo(char *filename)
+{
+	int count = 0, count1 = 0, cv = 0;
+	REAL f1, f2, f3, ymin, ymax;
+	char buffer[256];
+	fstream outfile;
+	outfile.open(filename);
+
+	while (!outfile.eof())
+	{
+		outfile.getline(buffer, 256, '\n'); //getline(char *,int,char)   
+		{
+			if (buffer[0] == 'v')
+			{
+				if (buffer[1] == ' ') //vertex:v ***
+				{
+					sscanf(buffer, "v %f %f %f", &f1, &f2, &f3); //easy way to get number from a string
+
+					if (count == 0)
+					{
+						if (move_x == 0 && move_y == 0 && move_z == 0)
+						{
+							move_x = -f1; //ok
+							move_y = -f2; //ok
+							move_z = -f3; //ok
+						}
+						ymax = ymin = 0;
+						count++;
+					}
+
+					this->vertex[cv][X] = f1 + move_x; //ok
+					this->vertex[cv][Y] = f2 + move_y; //ok
+					this->vertex[cv][Z] = f3 + move_z; //ok
+
+					if (ymax < this->vertex[cv][Y])
+						ymax = this->vertex[cv][Y];
+					if (ymin > this->vertex[cv][Y])
+						ymin = this->vertex[cv][Y];
+
+					cv++;
+				}
+			}
+		}
+	}
+	this->divide_y = (ymax + ymin) / 2.0;
+	outfile.close();
+}
+
+void Model::InitModel(char *filename, bool divide)
 {
 	char buffer[256];
-	int cv = 0, cvn = 0, cf = 0;
-	int i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12;
-	float f1, f2, f3;
+	int cv = 0, cvn = 0, cf = 0, count1 = 0, count2 = 0;
+	int i1, i2, i3, i4, i5, i6;
+	REAL f1, f2, f3;
+	REAL y1, y2;
 
 	fstream outfile;
 	outfile.open(filename);
 
-	Point3 temp;
-	Face temp_p;
+	Point3 temp_maxx1, temp_minx1, temp_maxx2, temp_minx2;
+	Point3 temp_maxz1, temp_minz1, temp_maxz2, temp_minz2;
 
-	this->fx = fx;
-	this->fy = fy;
-	this->fz = fz;
+	//20180128
+	this->SetInfo(filename);
 
 	while (!outfile.eof())
 	{
-		outfile.getline(buffer, 256, '\n'); //getline(char *,int,char) øúãÆ?ú¼í®Ý¬?Óð256?ûäéçÓð?ú¼ö¦?áÖ  
-		if (buffer[0] == 'v')
+		outfile.getline(buffer, 256, '\n'); //getline(char *,int,char)   
+		if (!divide)  //if no need to divide y
 		{
-			if (buffer[1] == ' ') //vertex:v ***
+			if (buffer[0] == 'v')
 			{
-				sscanf(buffer, "v %f %f %f", &f1, &f2, &f3); //easy way to get number from a string
-
-				this->vertex[cv][X] = f1 + fx;
-				this->vertex[cv][Y] = f2 + fy;
-				this->vertex[cv][Z] = f3 + fz;
-
-				/*init max_x and min_x*/
-				if (cv == 0)
+				if (buffer[1] == ' ') //vertex:v ***
 				{
-					COPY_PT(this->max_x, this->vertex[0]);
-					COPY_PT(this->min_x, this->vertex[0]);
-				}
-				else
-				{
-					if (this->vertex[cv][X] < min_x[X])
-						COPY_PT(this->min_x, this->vertex[cv]);
-					if (this->vertex[cv][X] > max_x[X])
+					sscanf(buffer, "v %f %f %f", &f1, &f2, &f3); //easy way to get number from a string
+					
+					this->vertex[cv][X] = f1 + move_x;
+					this->vertex[cv][Y] = f2 + move_y;
+					this->vertex[cv][Z] = f3 + move_z;
+
+					/*init max_x and min_x*/
+					if (cv == 0)
+					{
 						COPY_PT(this->max_x, this->vertex[cv]);
+						COPY_PT(this->min_x, this->vertex[cv]);
+					}
+					else
+					{
+						if (this->vertex[cv][X] < min_x[X])
+							COPY_PT(this->min_x, this->vertex[cv]);
+						if (this->vertex[cv][X] > max_x[X])
+							COPY_PT(this->max_x, this->vertex[cv]);
+					}
+					cv++;
 				}
-				cv++;
 			}
 		}
-		else if (buffer[0] == 'f')  //face:f ***
+		else  //if need to divide in y coordiante
+		{
+			if (buffer[0] == 'v')
+			{
+				if (buffer[1] == ' ') //vertex:v ***
+				{
+					sscanf(buffer, "v %f %f %f", &f1, &f2, &f3); //easy way to get number from a string
+					
+					this->vertex[cv][X] = f1 + move_x;
+					this->vertex[cv][Y] = f2 + move_y;
+					this->vertex[cv][Z] = f3 + move_z;
+
+					if (divide_y > this->vertex[cv][Y])	//Search part which y<stand_y
+					{
+						if (count1 == 0)
+						{
+							COPY_PT(temp_maxx1, this->vertex[cv]);
+							COPY_PT(temp_minx1, this->vertex[cv]);
+							count1++;
+						}
+						else
+						{
+							if (this->vertex[cv][X] < temp_minx1[X])
+								COPY_PT(temp_minx1, this->vertex[cv]);
+							if (this->vertex[cv][X] > temp_maxx1[X])
+								COPY_PT(temp_maxx1, this->vertex[cv]);
+						}
+						cv++;
+					}
+					else  //Search part which y>=stand_y
+					{
+						if (count2 == 0)
+						{
+							COPY_PT(temp_maxx2, this->vertex[cv]);
+							COPY_PT(temp_minx2, this->vertex[cv]);
+							count2++;
+						}
+						else
+						{
+							if (this->vertex[cv][X] < temp_minx2[X])
+								COPY_PT(temp_minx2, this->vertex[cv]);
+							if (this->vertex[cv][X] > temp_maxx2[X])
+								COPY_PT(temp_maxx2, this->vertex[cv]);
+						}
+						cv++;
+					}
+				}
+			}
+		}
+		if (buffer[0] == 'f')  //face:f ***
 		{
 			sscanf(buffer, "f %d//%d %d//%d %d//%d", &i1, &i2, &i3, &i4, &i5, &i6); //easy way to get fber from a
 			this->face[cf][0] = i1 - 1;
 			this->face[cf][1] = i3 - 1;
 			this->face[cf][2] = i5 - 1;
-			
+
 			cf++;
 		}
 	}
+	if (divide)
+	{
+		if (temp_minx1[X] > temp_minx2[X])
+			COPY_PT(this->min_x, temp_minx1);
+		else
+			COPY_PT(this->min_x, temp_minx2);
+
+		if (temp_maxx1[X] < temp_maxx2[X])
+			COPY_PT(this->max_x, temp_maxx1);
+		else
+			COPY_PT(this->max_x, temp_maxx2);
+	}
+
 	this->v_num = cv;
 	this->f_num = cf;
-	//20180119
-//	this->interval = (this->max_x[0] - this->min_x[0]) / ((this->slice_num - 1)* 1.0);
 
-	this->interval = (this->max_x[0] - this->min_x[0]) / ((this->slice_num)* 1.0);
+	this->interval = (this->max_x[X] - this->min_x[X]) / ((this->slice_num )* 1.0);
 
 	cout << "--------------------------" << endl;
 	cout << filename << "'s information:" << endl;
@@ -330,7 +443,7 @@ void Model::SetSlice()
 				this->all_slice[count].vertex[i][j] = 0;
 		}
 		/*calculate cur_x*/
-		REAL cur_x = this->min_x[0] + 0.2 + count * this->interval;
+		REAL cur_x = this->min_x[0] + (1 + count) * this->interval;
 
 		/*Set intersection result points in px*/
 		for (int i = 0; i < this->f_num; i++)
@@ -343,16 +456,11 @@ void Model::SetSlice()
 					ratio = (cur_x * 1.0 - this->vertex[this->face[i][j]][X]) / (1.0 * this->vertex[this->face[i][(j + 1) % 3]][X] - 1.0 * this->vertex[this->face[i][j]][X]);
 					inters_y = this->vertex[this->face[i][j]][Y] + ratio * (this->vertex[this->face[i][(j + 1) % 3]][Y] - this->vertex[this->face[i][j]][Y]);
 					inters_z = this->vertex[this->face[i][j]][Z] + ratio * (this->vertex[this->face[i][(j + 1) % 3]][Z] - this->vertex[this->face[i][j]][Z]);
-
-				//	if (upz)
 					{
-				//		if (inters_z > z)
-						{
-							this->all_slice[count].vertex[res_num][X] = cur_x;
-							this->all_slice[count].vertex[res_num][Y] = inters_y;
-							this->all_slice[count].vertex[res_num][Z] = inters_z;
-							res_num++;
-						}
+						this->all_slice[count].vertex[res_num][X] = cur_x;
+						this->all_slice[count].vertex[res_num][Y] = inters_y;
+						this->all_slice[count].vertex[res_num][Z] = inters_z;
+						res_num++;
 					}
 				}
 			}
@@ -371,11 +479,10 @@ void Model::SetSlice()
 	}
 }
 
-void Model::Divide_SetSlice(REAL y, bool upy)
+void Model::Divide_SetSlice(bool upy, REAL* FT_inter)
 {
 	REAL ratio;
 	REAL inters_y, inters_z;
-	REAL y1, y2;
 
 	int res_num;
 
@@ -390,7 +497,7 @@ void Model::Divide_SetSlice(REAL y, bool upy)
 		}
 		
 		/*calculate cur_x*/
-		REAL cur_x = this->min_x[0] + 0.2 + count * this->interval;
+		REAL cur_x = this->min_x[0] + (1 + count) * this->interval;
 
 		/*Set intersection result points in px*/
 		for (int i = 0; i < this->f_num; i++)
@@ -404,37 +511,30 @@ void Model::Divide_SetSlice(REAL y, bool upy)
 					inters_y = this->vertex[this->face[i][j]][Y] + ratio * (this->vertex[this->face[i][(j + 1) % 3]][Y] - this->vertex[this->face[i][j]][Y]);
 					inters_z = this->vertex[this->face[i][j]][Z] + ratio * (this->vertex[this->face[i][(j + 1) % 3]][Z] - this->vertex[this->face[i][j]][Z]);
 
-				//	if (upz)
+					if (upy)
 					{
-						if (upy)
+						if (inters_y > divide_y - *FT_inter)
 						{
-							if (inters_y > y)
-							{
-								this->all_slice[count].vertex[res_num][X] = cur_x;
-								this->all_slice[count].vertex[res_num][Y] = inters_y;
-								this->all_slice[count].vertex[res_num][Z] = inters_z;
-								res_num++;
+							this->all_slice[count].vertex[res_num][X] = cur_x;
+							this->all_slice[count].vertex[res_num][Y] = inters_y;
+							this->all_slice[count].vertex[res_num][Z] = inters_z;
+							res_num++;
 
-							}
 						}
-						if (!upy)
+					}
+					if (!upy)
+					{
+						if (inters_y < divide_y + *FT_inter)
 						{
-							if (inters_y < y)
-							{
-								this->all_slice[count].vertex[res_num][X] = cur_x;
-								this->all_slice[count].vertex[res_num][Y] = inters_y;
-								this->all_slice[count].vertex[res_num][Z] = inters_z;
-								res_num++;
-							}
+							this->all_slice[count].vertex[res_num][X] = cur_x;
+							this->all_slice[count].vertex[res_num][Y] = inters_y;
+							this->all_slice[count].vertex[res_num][Z] = inters_z;
+							res_num++;
 						}
 					}
 				}
 			}
 		}
-		//if (count == slice_num - 1)
-		//{
-		//	printf("a");
-		//}
 		this->all_slice[count].v_num = res_num;
 		this->all_slice[count].index = count;
 		this->all_slice[count].cur_x = cur_x;
@@ -466,8 +566,8 @@ void Model::DrawSliceCurve(int index, int slice_index)
 			for (int j = 0; j < 2; j++)
 			{
 				this->all_slice[i].cur_maxz[j].DrawCurve3D(temp);
-				this->all_slice[i].DrawMaxPt();
-				this->all_slice[i].DrawResultPt();
+			//	this->all_slice[i].DrawMaxPt();
+			//	this->all_slice[i].DrawResultPt();
 			}
 		}
 		else if (index == 3)
@@ -475,8 +575,8 @@ void Model::DrawSliceCurve(int index, int slice_index)
 			for (int j = 0; j < 2; j++)
 			{
 				this->all_slice[i].cur_minz[j].DrawCurve3D(temp);
-				this->all_slice[i].DrawMinPt();
-				this->all_slice[i].DrawResultPt();
+			//	this->all_slice[i].DrawMinPt();
+			//	this->all_slice[i].DrawResultPt();
 			}
 		}
 		temp = false;
@@ -677,15 +777,15 @@ void Model::OutFile(char *name, int index)
 					{
 						if (index == 0)
 						{
-							out4 << this->maxz_sur[i][j].points[m][n][X] - this->fx << "//";
-							out4 << this->maxz_sur[i][j].points[m][n][Y] - this->fy << "//";
-							out4 << this->maxz_sur[i][j].points[m][n][Z] - this->fz << endl;
+							out4 << this->maxz_sur[i][j].points[m][n][X] - move_x << "//";
+							out4 << this->maxz_sur[i][j].points[m][n][Y] - move_y << "//";
+							out4 << this->maxz_sur[i][j].points[m][n][Z] - move_z << endl;
 						}
 						else if (index == 1)
 						{
-							out4 << this->minz_sur[i][j].points[m][n][X] - this->fx << "//";
-							out4 << this->minz_sur[i][j].points[m][n][Y] - this->fy << "//";
-							out4 << this->minz_sur[i][j].points[m][n][Z] - this->fz << endl;
+							out4 << this->minz_sur[i][j].points[m][n][X] - move_x << "//";
+							out4 << this->minz_sur[i][j].points[m][n][Y] - move_y << "//";
+							out4 << this->minz_sur[i][j].points[m][n][Z] - move_z << endl;
 						}
 					}
 					out4 << endl;
@@ -794,9 +894,9 @@ void SliceBoundary::SetSliceMM()
 	/*Set ymin and ymax*/
 	{
 		//interval = (all_slice[count].ymax - all_slice[count].ymin) / 10.0;
-		interval = (this->ymax - this->ymin) / 5.0;
+		interval = (this->ymax - this->ymin) / MV_num;
 		
-		for (int i = 1; i < 6; i++)
+		for (int i = 1; i < MV_num + 1; i++)
 		{
 			y1 = this->ymin + (i - 1) * interval;
 			y2 = this->ymin + i * interval;
@@ -805,7 +905,7 @@ void SliceBoundary::SetSliceMM()
 			this->SetMaxz(y1, y2, &this->maxz_vertex[i - 1]);
 			/*set slice's min points modified*/
 			this->SetMinz(y1, y2, &this->minz_vertex[i - 1]);
-	//		cout << "maxPoint is: (" << this->maxz_vertex[i - 1][X] << "," << this->maxz_vertex[i - 1][Y] << "," << this->maxz_vertex[i - 1][Z] << ")" << endl;
+			//cout << "maxPoint is: (" << this->maxz_vertex[i - 1][X] << "," << this->maxz_vertex[i - 1][Y] << "," << this->maxz_vertex[i - 1][Z] << ")" << endl;
 		}
 		cout << endl;
 	}
@@ -886,7 +986,7 @@ void SliceBoundary::SetMaxzCurve(bool upz)
 	z_max = z_min = ymax_z = ymin_z = this->maxz_vertex[0][Z];
 	y_max = y_min = zmax_y = zmin_y = this->maxz_vertex[0][Y];
 
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < MV_num; i++)
 	{
 		if (z_max <= this->maxz_vertex[i][Z]) {
 			z_max = this->maxz_vertex[i][Z];
@@ -974,7 +1074,7 @@ void SliceBoundary::SetMinzCurve(bool upz)
 	z_max = z_min = ymax_z = ymin_z = this->minz_vertex[0][Z];
 	y_max = y_min = zmax_y = zmin_y = this->minz_vertex[0][Y];
 
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < MV_num; i++)
 	{
 		if (z_max <= this->minz_vertex[i][Z]) {
 			z_max = this->minz_vertex[i][Z];
@@ -1068,7 +1168,7 @@ void SliceBoundary::DrawMaxPt()
 	glColor3ub(255, 0, 0);
 	glPointSize(9.0);
 	glBegin(GL_POINTS);
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < MV_num; i++)
 		glVertex3fv(this->maxz_vertex[i]);
 	glEnd();
 }
@@ -1078,7 +1178,7 @@ void SliceBoundary::DrawMinPt()
 	glColor3ub(0, 255, 0);
 	glPointSize(9.0);
 	glBegin(GL_POINTS);
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < MV_num; i++)
 		glVertex3fv(this->minz_vertex[i]);
 	glEnd();
 }

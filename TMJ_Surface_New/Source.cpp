@@ -20,6 +20,7 @@ bool show_Tubercle = false;
 bool show1 = true, show2 = true;
 bool sur_out = false;  //output surface to file
 REAL radius;
+REAL FT_inter = 0;
 
 int mouseButton = -1;
 int lastX = -1;
@@ -29,28 +30,48 @@ int slice_index = 0;
 void init()
 {
 	/*Get vertex, face infomation*/
-	//TMJ.InitModel("TMJ_left.obj", -45, -30, -30);
-	//Fossa.InitModel("Fossa_left.obj", -45, -30, -30);
-	//Tubercle.InitModel("Fossa_left.obj", -45, -30, -30);
+	//TMJ.InitModel("E00000099_TMJ_left.obj", -1, false);
+	//Fossa.InitModel("E00000099_Fossa_left.obj", -1, true);
+	//Tubercle.InitModel("E00000099_Fossa_left.obj", -1, true);
 
-	/*TMJ.InitModel("TMJ_right.obj", 60, -30, -30);
-	Fossa.InitModel("Fossa_right.obj", 60, -30, -30);
-	Tubercle.InitModel("Fossa_right.obj", 60, -30, -30);*/
+	/*TMJ.InitModel("E00000099_TMJ_right.obj", -1, false);
+	Fossa.InitModel("E00000099_Fossa_right.obj", -1, true);
+	Tubercle.InitModel("E00000099_Fossa_right.obj", -1, true);*/
 
-	/*TMJ.InitModel("Extended1_left_TMJ.obj", -50, 15, -35);
-	Fossa.InitModel("Extended1_left_Fossa.obj", -50, 15, -35);
-	Tubercle.InitModel("Extended1_left_Fossa.obj", -50, 15, -35);*/
+	/*TMJ.InitModel("Extended1_left_TMJ.obj", -1 ,false);
+	Fossa.InitModel("Extended1_left_Fossa.obj", -1, true);
+	Tubercle.InitModel("Extended1_left_Fossa.obj", -1, true);*/
 
-	TMJ.InitModel("Extended1_right_TMJ.obj", 65, 22, -33);
-	Fossa.InitModel("Extended1_right_Fossa.obj", 65, 22, -33);
-	Tubercle.InitModel("Extended1_right_Fossa.obj", 65, 22, -33);
+	//TMJ.InitModel("Extended1_right_TMJ.obj", -1, false);
+	//Fossa.InitModel("Extended1_right_Fossa.obj", -1, true);
+	//Tubercle.InitModel("Extended1_right_Fossa.obj", -1, true);
+
+	/*TMJ.InitModel("Extended2_right_TMJ.obj", false);
+	Fossa.InitModel("Extended2_right_Fossa.obj", true);
+	Tubercle.InitModel("Extended2_right_Fossa.obj", true);*/
+
+	//TMJ.InitModel("Extended2_left_TMJ.obj", -1, false);
+	//Fossa.InitModel("Extended2_left_Fossa.obj", 1, true);
+	//Tubercle.InitModel("Extended2_left_Fossa.obj", 1, true);
+
+	//TMJ.InitModel("Normal1_left_TMJ.obj", false);
+	//Fossa.InitModel("Normal1_left_Fossa.obj", true);
+	//Tubercle.InitModel("Normal1_left_Fossa.obj", true);
+
+	/*TMJ.InitModel("Normal1_right_TMJ.obj", false);
+	Fossa.InitModel("Normal1_right_Fossa.obj", true);
+	Tubercle.InitModel("Normal1_right_Fossa.obj", true);*/
+
+	TMJ.InitModel("TMJ.obj", false);
+	Fossa.InitModel("Fossa.obj", true);
+	Tubercle.InitModel("Fossa.obj", true);
 
 	/*Set Fossa_right information*/
-	Fossa.Divide_SetSlice(1.1, true);
+	Fossa.Divide_SetSlice(true, &FT_inter);
 	Fossa.SetSurface();
 
 	/*Set Tubercle_right information*/
-	Tubercle.Divide_SetSlice(3.5, false);
+	Tubercle.Divide_SetSlice(false, &FT_inter);
 	Tubercle.SetSurface();
 
 	/*Set TMJ information*/
@@ -110,6 +131,19 @@ void reshape_callback(GLint nw, GLint nh)
 
 void display_callback(void)
 {
+	//20180128
+	/*Set Fossa_right information*/
+	Fossa.Divide_SetSlice(true, &FT_inter);
+	Fossa.SetSurface();
+
+	/*Set Tubercle_right information*/
+	Tubercle.Divide_SetSlice(false, &FT_inter);
+	Tubercle.SetSurface();
+
+	/*Set TMJ information*/
+	TMJ.SetSlice();
+	TMJ.SetSurface();
+
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -169,7 +203,7 @@ void display_callback(void)
 	glColor3ub(255, 0, 0);
 	glPointSize(9.0);
 	glBegin(GL_POINTS);
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < MV_num; i++)
 	{
 		if (show_TMJ)
 			glVertex2f(TMJ.all_slice[slice_index].maxz_vertex[i][Y], TMJ.all_slice[slice_index].maxz_vertex[i][Z]);
@@ -212,8 +246,21 @@ void display_callback(void)
 	glVertex3f(0, 0, 500.0f);
 	glEnd();
 
-	TMJ.DrawModel();
-	Fossa.DrawModel();
+	if (show1)
+	{
+		TMJ.DrawModel();
+	//	TMJ.DrawSliceCurve(2, slice_index);
+		TMJ.DrawSliceSurface(2);
+	}
+	if (show2)
+	{
+		Fossa.DrawModel();
+	//	Fossa.DrawSliceCurve(3, slice_index);
+		Fossa.DrawSliceSurface(3);
+
+	//	Tubercle.DrawSliceCurve(3, slice_index);
+		Tubercle.DrawSliceSurface(3);
+	}
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -497,6 +544,12 @@ void specialkey(int key, int x, int y)
 	case GLUT_KEY_RIGHT:
 		slice_index = (slice_index + 1) % 13;
 		break;
+	case GLUT_KEY_UP:
+		FT_inter = FT_inter + 0.1;
+		break;
+	case GLUT_KEY_DOWN:
+		FT_inter = FT_inter - 0.1;
+		break;
 	default:
 		break;
 	}
@@ -508,7 +561,7 @@ int main(int argc, char *argv[])
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowSize(width, height);
-	glutCreateWindow("Bezier Editor");
+	glutCreateWindow("Auto-Surface(Extended1)");
 
 	init();
 	glutReshapeFunc(reshape_callback);
