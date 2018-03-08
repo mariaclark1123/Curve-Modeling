@@ -1,5 +1,5 @@
 #include <vector>
-
+#include "viewport.h"
 #ifndef _CURVE_H_
 #define _CURVE_H_
 
@@ -84,22 +84,25 @@ public:
 	/*Assignment from Model::InitModel(char *filename, float fx, float fy, float fz)*/
 	int v_num;
 	int f_num;
+	int vn_num;
 	Point3 vertex[100000];
+	Point3 normal[100000];
 	Face face[200000];
 	/*Calculate interval*/
 	Point3 max_x; 
 	Point3 min_x;
 	REAL interval;
 	REAL divide_y;
+	//texture
+	REAL texture[10000][2];
 
 	/*Slice information*/
-	SliceBoundary cur_slice; /*noused*/
 	SliceBoundary all_slice[14];
 	BicubicBezierSurface sur[4][4];  //Assignement from SetSurface()
 	BicubicBezierSurface maxz_sur[4][2];  //Assignement from SetSurface()
 	BicubicBezierSurface minz_sur[4][2];  //Assignement from SetSurface()
 
-	void SetInfo(char *filename);
+	void SetInfo(char *filename);  //get all vertex and face
 	void InitModel(char *filename, bool divide);
 	void DrawModel();
 
@@ -109,7 +112,6 @@ public:
 	
 	/*Draw all slice's bezier curve*/
 	void DrawSliceCurve(int index, int slice_i);  
-
 	void SetSurface(); 
 	void DrawSliceSurface(int index);  //Draw all surfaces
 	

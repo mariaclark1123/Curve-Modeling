@@ -1,5 +1,5 @@
 #include <windows.h>
-#include <gl/glut.h>
+#include <gl/freeglut.h>
 
 #define MAX_CHAR 128
 

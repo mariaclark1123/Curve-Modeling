@@ -8,7 +8,7 @@
 #include <float.h>
 #include <fstream>
 #include <iostream>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 
 using namespace std;
 
@@ -275,14 +275,12 @@ void Model::InitModel(char *filename, bool divide)
 	char buffer[256];
 	int cv = 0, cvn = 0, cf = 0, count1 = 0, count2 = 0;
 	int i1, i2, i3, i4, i5, i6;
-	REAL f1, f2, f3;
-	REAL y1, y2;
+	REAL f1, f2, f3, n1, n2, n3;
 
 	fstream outfile;
 	outfile.open(filename);
 
 	Point3 temp_maxx1, temp_minx1, temp_maxx2, temp_minx2;
-	Point3 temp_maxz1, temp_minz1, temp_maxz2, temp_minz2;
 
 	//20180128
 	this->SetInfo(filename);
@@ -368,6 +366,18 @@ void Model::InitModel(char *filename, bool divide)
 				}
 			}
 		}
+		if (buffer[0] == 'v')
+		{
+			if (buffer[1] == 'n') //vertex:v ***
+			{
+				sscanf(buffer, "vn %f %f %f", &n1, &n2, &n3); //easy way to get number from a string
+
+				this->vertex[cv][X] = n1;
+				this->vertex[cv][Y] = n2;
+				this->vertex[cv][Z] = n3;
+				cvn++;
+			}
+		}
 		if (buffer[0] == 'f')  //face:f ***
 		{
 			sscanf(buffer, "f %d//%d %d//%d %d//%d", &i1, &i2, &i3, &i4, &i5, &i6); //easy way to get fber from a
@@ -391,26 +401,52 @@ void Model::InitModel(char *filename, bool divide)
 			COPY_PT(this->max_x, temp_maxx2);
 	}
 
-	this->v_num = cv;
-	this->f_num = cf;
+	v_num = cv;
+	f_num = cf;
+	vn_num = cvn;
 
-	this->interval = (this->max_x[X] - this->min_x[X]) / ((this->slice_num )* 1.0);
+	interval = (this->max_x[X] - this->min_x[X]) / ((this->slice_num )* 1.0);
+	
+		//Set texture
+	for (int i = 0; i < cv; i++)
+	{
+		Vector3d n = Vector3d(vertex[i][X], vertex[i][Y], vertex[i][Z]);
+		n.normalize();
+		REAL sum = sqrt(n.x*n.x + n.y*n.y + n.z*n.z);
+		texture[i][0] = (n.x / sum + 1) / 2;
+		texture[i][1] = (-n.y / sum + 1) / 2;
+	}
+
 
 	cout << "--------------------------" << endl;
 	cout << filename << "'s information:" << endl;
-	cout << "min_x is " << min_x[0] << endl;
-	cout << "max_x is " << max_x[0] << endl;
-	cout << "interval is " << this->interval << endl;
 	cout << "vertex number is " << cv << endl;
+	cout << "normal number is " << cvn << endl;
 	cout << "face number is " << cf << endl;
+	cout << "min_x is " << this->min_x[0] << endl;
+	cout << "max_x is " << this->max_x[0] << endl;
+	cout << "X coordinate interval is " << this->interval << endl;
+	cout << "Y coordinate divide is " << this->divide_y << endl;
 	outfile.close();
 }
 
 void Model::DrawModel()
 {
+	glEnable(GL_TEXTURE_2D);
+//	glColor3f(0.8, 0.8, 0.8);
+
 	for (int i = 0; i < f_num; i++)
 	{
-		glColor3f(0.8, 0.8, 0.8);
+		glBegin(GL_TRIANGLES);
+		for (int j = 0; j < 3; j++)
+		{
+			REAL tex[2] = { texture[face[i][j]][0], texture[face[i][j]][1] };
+			REAL pt[3] = { vertex[face[i][j]][0], vertex[face[i][j]][1], vertex[face[i][j]][2] };
+			glTexCoord2fv(tex);
+			glVertex3fv(pt);
+		}
+		glEnd();
+		/*glColor3f(0.8, 0.8, 0.8);
 		glBegin(GL_TRIANGLES);
 		glVertex3f(this->vertex[this->face[i][0]][0], this->vertex[this->face[i][0]][1], this->vertex[this->face[i][0]][2]);
 		glVertex3f(this->vertex[this->face[i][1]][0], this->vertex[this->face[i][1]][1], this->vertex[this->face[i][1]][2]);
@@ -422,8 +458,9 @@ void Model::DrawModel()
 		glVertex3f(this->vertex[this->face[i][0]][0], this->vertex[this->face[i][0]][1], this->vertex[this->face[i][0]][2]);
 		glVertex3f(this->vertex[this->face[i][1]][0], this->vertex[this->face[i][1]][1], this->vertex[this->face[i][1]][2]);
 		glVertex3f(this->vertex[this->face[i][2]][0], this->vertex[this->face[i][2]][1], this->vertex[this->face[i][2]][2]);
-		glEnd();
+		glEnd();*/
 	}
+	glDisable(GL_TEXTURE_2D);
 }
 
 void Model::SetSlice()
@@ -566,8 +603,6 @@ void Model::DrawSliceCurve(int index, int slice_index)
 			for (int j = 0; j < 2; j++)
 			{
 				this->all_slice[i].cur_maxz[j].DrawCurve3D(temp);
-			//	this->all_slice[i].DrawMaxPt();
-			//	this->all_slice[i].DrawResultPt();
 			}
 		}
 		else if (index == 3)
@@ -575,8 +610,6 @@ void Model::DrawSliceCurve(int index, int slice_index)
 			for (int j = 0; j < 2; j++)
 			{
 				this->all_slice[i].cur_minz[j].DrawCurve3D(temp);
-			//	this->all_slice[i].DrawMinPt();
-			//	this->all_slice[i].DrawResultPt();
 			}
 		}
 		temp = false;
@@ -621,6 +654,7 @@ void Model::SetSurface()
 	}
 }
 
+//Use index to draw full-slice surface, up-surface and down-surface.
 void Model::DrawSliceSurface(int index)
 {
 	if (index == 1)

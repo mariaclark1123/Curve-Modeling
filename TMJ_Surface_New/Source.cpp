@@ -1,10 +1,17 @@
-﻿#include "curve.h"
-#include "viewport.h"
+﻿#pragma warning(disable:4146)
+#pragma warning(disable:4996)
+#define STB_IMAGE_IMPLEMENTATION
+#define _CRT_SECURE_NO_WARNINGS
+#include "curve.h"
 #include "string.h"
+#include "Texture.h"
+#include "lodepng.h"
+#include "stb_image.h"
+#include <gl/freeglut.h>
 
 /* global */
 Model TMJ, Fossa, Tubercle;
-GLsizei width = 800, height = 600;
+GLsizei width = 800, height = 800;
 float viewportwidth = 400, viewportheight = 300;
 
 int selectedscene = 0;
@@ -19,6 +26,7 @@ bool show_Fossa = false;
 bool show_Tubercle = false;
 bool show1 = true, show2 = true;
 bool sur_out = false;  //output surface to file
+bool FT_changed = false;
 REAL radius;
 REAL FT_inter = 0;
 
@@ -29,39 +37,24 @@ int slice_index = 0;
 
 void init()
 {
+	//load image;
+//	unsigned int tex;
+//	initPNG(&tex, "bone3.png", width, height);
+	//Load texture
+	unsigned char *data = stbi_load("bone5.png", &width, &height, 0, 0);
+	if (data)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	
+	stbi_image_free(data);
+	float texture[10000][2];
+
 	/*Get vertex, face infomation*/
-	//TMJ.InitModel("E00000099_TMJ_left.obj", -1, false);
-	//Fossa.InitModel("E00000099_Fossa_left.obj", -1, true);
-	//Tubercle.InitModel("E00000099_Fossa_left.obj", -1, true);
-
-	/*TMJ.InitModel("E00000099_TMJ_right.obj", -1, false);
-	Fossa.InitModel("E00000099_Fossa_right.obj", -1, true);
-	Tubercle.InitModel("E00000099_Fossa_right.obj", -1, true);*/
-
-	/*TMJ.InitModel("Extended1_left_TMJ.obj", -1 ,false);
-	Fossa.InitModel("Extended1_left_Fossa.obj", -1, true);
-	Tubercle.InitModel("Extended1_left_Fossa.obj", -1, true);*/
-
-	//TMJ.InitModel("Extended1_right_TMJ.obj", -1, false);
-	//Fossa.InitModel("Extended1_right_Fossa.obj", -1, true);
-	//Tubercle.InitModel("Extended1_right_Fossa.obj", -1, true);
-
-	/*TMJ.InitModel("Extended2_right_TMJ.obj", false);
-	Fossa.InitModel("Extended2_right_Fossa.obj", true);
-	Tubercle.InitModel("Extended2_right_Fossa.obj", true);*/
-
-	//TMJ.InitModel("Extended2_left_TMJ.obj", -1, false);
-	//Fossa.InitModel("Extended2_left_Fossa.obj", 1, true);
-	//Tubercle.InitModel("Extended2_left_Fossa.obj", 1, true);
-
-	//TMJ.InitModel("Normal1_left_TMJ.obj", false);
-	//Fossa.InitModel("Normal1_left_Fossa.obj", true);
-	//Tubercle.InitModel("Normal1_left_Fossa.obj", true);
-
-	/*TMJ.InitModel("Normal1_right_TMJ.obj", false);
-	Fossa.InitModel("Normal1_right_Fossa.obj", true);
-	Tubercle.InitModel("Normal1_right_Fossa.obj", true);*/
-
 	TMJ.InitModel("TMJ.obj", false);
 	Fossa.InitModel("Fossa.obj", true);
 	Tubercle.InitModel("Fossa.obj", true);
@@ -83,38 +76,38 @@ void init()
 	upVector = Vector3d(0, 1, 0);
 }
 
-int hit_index(int x, int y, int scene)
-{
-	int xx, yy;
-	switch (scene)
-	{
-	case 1:
-		xx = 0, yy = 1;
-		break;
-	case 3:
-		xx = 0, yy = 2;
-		break;
-	case 4:
-		xx = 1, yy = 2;
-		break;
-	}
-	int min = 30;
-	int minp = -1;
-	/*for (int i = 0; i < 4; i++)
-	{
-		for (int j = 0; j < 4; j++)
-		{
-			float tx = bezsur.control_pts[i][j][xx] - x;
-			float ty = bezsur.control_pts[i][j][yy] - y;
-			if ((tx * tx + ty * ty) < min)
-			{
-				min = (tx * tx + ty * ty);
-				minp = i * 10 + j;
-			}
-		}
-	}*/
-	return minp;
-}
+//int hit_index(int x, int y, int scene)
+//{
+//	int xx, yy;
+//	switch (scene)
+//	{
+//	case 1:
+//		xx = 0, yy = 1;
+//		break;
+//	case 3:
+//		xx = 0, yy = 2;
+//		break;
+//	case 4:
+//		xx = 1, yy = 2;
+//		break;
+//	}
+//	int min = 30;
+//	int minp = -1;
+//	/*for (int i = 0; i < 4; i++)
+//	{
+//		for (int j = 0; j < 4; j++)
+//		{
+//			float tx = bezsur.control_pts[i][j][xx] - x;
+//			float ty = bezsur.control_pts[i][j][yy] - y;
+//			if ((tx * tx + ty * ty) < min)
+//			{
+//				min = (tx * tx + ty * ty);
+//				minp = i * 10 + j;
+//			}
+//		}
+//	}*/
+//	return minp;
+//}
 
 void reshape_callback(GLint nw, GLint nh)
 {
@@ -131,19 +124,17 @@ void reshape_callback(GLint nw, GLint nh)
 
 void display_callback(void)
 {
-	//20180128
-	/*Set Fossa_right information*/
-	Fossa.Divide_SetSlice(true, &FT_inter);
-	Fossa.SetSurface();
+	/*Set Fossa information*/
+	if (FT_changed)
+	{
+		Fossa.Divide_SetSlice(true, &FT_inter);
+		Fossa.SetSurface();
 
-	/*Set Tubercle_right information*/
-	Tubercle.Divide_SetSlice(false, &FT_inter);
-	Tubercle.SetSurface();
-
-	/*Set TMJ information*/
-	TMJ.SetSlice();
-	TMJ.SetSurface();
-
+		/*Set Tubercle information*/
+		Tubercle.Divide_SetSlice(false, &FT_inter);
+		Tubercle.SetSurface();
+		FT_changed = false;
+	}
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -167,13 +158,13 @@ void display_callback(void)
 	/*-----------Slice----------*/
 	glViewport(0, viewportheight, viewportwidth, viewportheight);
 	glLoadIdentity();
-	gluOrtho2D(-10, 10, -10, 10);
+	gluOrtho2D(-15, 15, -15, 15);
 	//annotation
 	char str[4];
 	_itoa_s(slice_index, str, 10);
 
 	glColor3ub(0, 0, 0);
-	glRasterPos2f(-9.5, 9);
+	glRasterPos2f(-14.5, 14);
 	if(show_Fossa)
 		drawString("Foosa Slice");
 	else if (show_TMJ)
@@ -249,16 +240,12 @@ void display_callback(void)
 	if (show1)
 	{
 		TMJ.DrawModel();
-	//	TMJ.DrawSliceCurve(2, slice_index);
 		TMJ.DrawSliceSurface(2);
 	}
 	if (show2)
 	{
 		Fossa.DrawModel();
-	//	Fossa.DrawSliceCurve(3, slice_index);
 		Fossa.DrawSliceSurface(3);
-
-	//	Tubercle.DrawSliceCurve(3, slice_index);
 		Tubercle.DrawSliceSurface(3);
 	}
 
@@ -307,6 +294,9 @@ void display_callback(void)
 	Tubercle.DrawSliceCurve(3, slice_index);
 	Tubercle.DrawSliceSurface(3);
 	
+
+
+
 	glDisable(GL_DEPTH_TEST);
 
 	/*-----------TMJ----------*/
@@ -351,9 +341,6 @@ void display_callback(void)
 	if (sur_out)
 	{
 		sur_out = false;
-		/*TMJ.OutFile("TMJHead_quad.txt");
-		Fossa.OutFile("Fossa_quad.txt");
-		Tubercle.OutFile("Tubercle_quad.txt");*/
 		TMJ.OutFile("TMJHead_quad.txt", 0);
 		Fossa.OutFile("Fossa_quad.txt", 1);
 		Tubercle.OutFile("Tubercle_quad.txt", 1);
@@ -402,7 +389,7 @@ void mouse_callback(GLint button, GLint action, GLint x, GLint y)
 			lastY = y;
 		}
 	}
-	else
+	/*else
 	{
 		if (button == GLUT_LEFT_BUTTON)
 		{
@@ -418,7 +405,7 @@ void mouse_callback(GLint button, GLint action, GLint x, GLint y)
 			default: break;
 			}
 		}
-	}
+	}*/
 	glutPostRedisplay();
 }
 
@@ -546,9 +533,11 @@ void specialkey(int key, int x, int y)
 		break;
 	case GLUT_KEY_UP:
 		FT_inter = FT_inter + 0.1;
+		FT_changed = true;
 		break;
 	case GLUT_KEY_DOWN:
 		FT_inter = FT_inter - 0.1;
+		FT_changed = true;
 		break;
 	default:
 		break;
@@ -564,12 +553,13 @@ int main(int argc, char *argv[])
 	glutCreateWindow("Auto-Surface(Extended1)");
 
 	init();
+	glutDisplayFunc(display_callback);
 	glutReshapeFunc(reshape_callback);
 	glutMouseFunc(mouse_callback);
 	glutMotionFunc(mouse_move_callback);
-	glutDisplayFunc(display_callback);
 	glutKeyboardFunc(keyboard_callback);
 	glutSpecialFunc(specialkey);
 	glutMainLoop();
 	return 0;
 }
+
