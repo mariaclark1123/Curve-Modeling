@@ -12,17 +12,17 @@
 #define LARGE    FLT_MAX
 //enum XY { X = 0, Y };
 enum TYPE { AABB = 0, OBB };
-struct Vector3d {
+struct Vec3d {
 	float x;
 	float y;
 	float z;
 
-	Vector3d() {
+	Vec3d() {
 		this->x = 0;
 		this->y = 0;
 		this->z = 0;
 	}
-	Vector3d(float x, float y, float z) {
+	Vec3d(float x, float y, float z) {
 		this->x = x;
 		this->y = y;
 		this->z = z;
@@ -32,13 +32,13 @@ struct Vector3d {
 		this->y = y;
 		this->z = z;
 	}
-	void sub(Vector3d t1, Vector3d t2)
+	void sub(Vec3d t1, Vec3d t2)
 	{
 		this->x = t1.x - t2.x;
 		this->y = t1.y - t2.y;
 		this->z = t1.z - t2.z;
 	}
-	void cross(Vector3d v1, Vector3d v2)
+	void cross(Vec3d v1, Vec3d v2)
 	{
 		float x, y;
 		x = v1.y*v2.z - v1.z*v2.y;
@@ -53,7 +53,7 @@ struct Vector3d {
 		this->y *= s;
 		this->z *= s;
 	}
-	void add(Vector3d t1)
+	void add(Vec3d t1)
 	{
 		this->x = this->x + t1.x;
 		this->y = this->y + t1.y;
@@ -71,18 +71,18 @@ struct Vector3d {
 	{
 		return std::sqrt(this->x*this->x + this->y*this->y + this->z*this->z);
 	}
-	float dot(Vector3d v1)
+	float dot(Vec3d v1)
 	{
 		return (this->x*v1.x + this->y*v1.y + this->z*v1.z);
 	}
-	float angle(Vector3d v1)
+	float angle(Vec3d v1)
 	{
 		float vDot = this->dot(v1) / (this->length()*v1.length());
 		if (vDot < -1.0) vDot = -1.0;
 		if (vDot >  1.0) vDot = 1.0;
 		return((float)(std::acos(vDot)));
 	}
-	float distance(Vector3d p1)
+	float distance(Vec3d p1)
 	{
 		float dx, dy, dz;
 		dx = this->x - p1.x;
@@ -102,7 +102,7 @@ struct Matrix3d {
 	float m00, m01, m02, m10, m11, m12, m20, m21, m22;
 	Matrix3d() {
 	}
-	void set(float angle, Vector3d v) {
+	void set(float angle, Vec3d v) {
 		set(angle, v.x, v.y, v.z);
 	}
 	void set(float angle, float x, float y, float z) {
@@ -140,7 +140,7 @@ struct Matrix3d {
 			m22 = t * az * az + cosTheta;
 		}
 	}
-	void transform(Vector3d& t) {
+	void transform(Vec3d& t) {
 		float x, y, z;
 		x = m00* t.x + m01*t.y + m02*t.z;
 		y = m10* t.x + m11*t.y + m12*t.z;
@@ -149,7 +149,7 @@ struct Matrix3d {
 	}
 };
 
-Vector3d rotate(Vector3d input, Vector3d rotateVector, float angle);
-Vector3d unProjectToEye(Vector3d vector, Vector3d& eye, Vector3d& center, Vector3d& upVector);
-Vector3d getMousePoint(int mouseX, int mouseY, int width, int height, float radius);
+Vec3d rotate(Vec3d input, Vec3d rotateVec3dtor, float angle);
+Vec3d unProjectToEye(Vec3d Vec3dtor, Vec3d& eye, Vec3d& center, Vec3d& upVec3dtor);
+Vec3d getMousePoint(int mouseX, int mouseY, int width, int height, float radius);
 #endif /* _VIEWPORT_H_ */

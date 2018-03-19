@@ -1,5 +1,8 @@
 #include <vector>
 #include "viewport.h"
+#include <Eigen/Dense>
+
+using namespace Eigen;
 #ifndef _CURVE_H_
 #define _CURVE_H_
 
@@ -68,9 +71,10 @@ public:
 	void SetMinz(REAL y_start, REAL y_end, Point3 *min);
 
 	/*Set maxcur[2] and mincur[2]*/
-	void SetMaxzCurve(bool upz);
-	void SetMinzCurve(bool upz);
-
+	void SetMaxzCurve(bool upz, bool update);
+	void SetMinzCurve(bool upz, bool update);
+	void SetCurvePt(CubicBezierCurve* cur, Point3 start, Point3 middle, Point3 end);
+	void SetCurvePt_Mat(CubicBezierCurve* cur, REAL x, int start_index, int end_index, bool max);
 	void DrawResultPt();
 	void DrawMaxPt();
 	void DrawMinPt();
@@ -97,7 +101,7 @@ public:
 	REAL texture[10000][2];
 
 	/*Slice information*/
-	SliceBoundary all_slice[14];
+	SliceBoundary all_slice[14];  //14 slices contributes to 2 * 4 patch
 	BicubicBezierSurface sur[4][4];  //Assignement from SetSurface()
 	BicubicBezierSurface maxz_sur[4][2];  //Assignement from SetSurface()
 	BicubicBezierSurface minz_sur[4][2];  //Assignement from SetSurface()

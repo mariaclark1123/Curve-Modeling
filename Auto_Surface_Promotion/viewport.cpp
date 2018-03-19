@@ -9,24 +9,24 @@ void PRINT_CTRLPTS(CubicBezierCurve* crv) {
 	printf("]\n");
 }
 #endif
-Vector3d rotate(Vector3d input, Vector3d rotateVector, float angle) {
+Vec3d rotate(Vec3d input, Vec3d rotateVector, float angle) {
 	Matrix3d matrix;
-	Vector3d rotated = input;
+	Vec3d rotated = input;
 	matrix.set(angle, rotateVector);
 	matrix.transform(rotated);
 	return rotated;
 }
-Vector3d unProjectToEye(Vector3d vector, Vector3d& eye, Vector3d& center, Vector3d& upVector) {
-	Vector3d zAxis;
+Vec3d unProjectToEye(Vec3d vector, Vec3d& eye, Vec3d& center, Vec3d& upVector) {
+	Vec3d zAxis;
 	zAxis.sub(center, eye);
 	zAxis.normalize();
-	Vector3d xAxis;
+	Vec3d xAxis;
 	xAxis.cross(upVector, zAxis);
 	xAxis.normalize();
-	Vector3d yAxis;
+	Vec3d yAxis;
 	yAxis.cross(zAxis, xAxis);
 	yAxis.normalize();
-	Vector3d newVector;
+	Vec3d newVector;
 	xAxis.scale(vector.x);
 	newVector.add(xAxis);
 	yAxis.scale(vector.y);
@@ -35,7 +35,7 @@ Vector3d unProjectToEye(Vector3d vector, Vector3d& eye, Vector3d& center, Vector
 	newVector.add(zAxis);
 	return newVector;
 }
-Vector3d getMousePoint(int mouseX, int mouseY, int width, int height, float radius) {
+Vec3d getMousePoint(int mouseX, int mouseY, int width, int height, float radius) {
 	float x = mouseX - width / 2.0;
 	float y = mouseY - height / 2.0;
 	float zs = radius*radius - x*x - y*y;
@@ -43,5 +43,5 @@ Vector3d getMousePoint(int mouseX, int mouseY, int width, int height, float radi
 		zs = 0;
 	}
 	float z = std::sqrt(zs);
-	return Vector3d(x, y, z);
+	return Vec3d(x, y, z);
 }
