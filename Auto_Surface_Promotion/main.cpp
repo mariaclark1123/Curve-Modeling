@@ -26,7 +26,7 @@ bool show1 = true, show2 = true;
 bool sur_out = false;  //output surface to file
 bool FT_changed = false;
 REAL radius;
-REAL FT_inter = 0;
+REAL FT_inter = 0.01;
 
 int mouseButton = -1;
 int lastX = -1;
@@ -35,9 +35,6 @@ int slice_index = 0;
 
 void init()
 {
-	//load image;
-	//	unsigned int tex;
-	//	initPNG(&tex, "bone3.png", width, height);
 	//Load texture
 	unsigned char *data = stbi_load("bone7.jpg", &width, &height, 0, 0);
 	if (data)
@@ -52,9 +49,9 @@ void init()
 	stbi_image_free(data);
 
 	/*Get vertex, face infomation*/
-	TMJ.InitModel("Model/TMJ.obj", false);
-	Fossa.InitModel("Model/Fossa.obj", true);
-	Tubercle.InitModel("Model/Fossa.obj", true);
+	TMJ.InitModel("Model/Extended1_left_TMJ.obj", false);
+	Fossa.InitModel("Model/Extended1_left_Fossa.obj", true);
+	Tubercle.InitModel("Model/Extended1_left_Fossa.obj", true);
 
 	/*Set Fossa_right information*/
 	Fossa.Divide_SetSlice(true, &FT_inter);
@@ -69,6 +66,7 @@ void init()
 	TMJ.SetSurface();
 
 	eye = Vec3d(60, 60, 60);
+
 	center = Vec3d(0, 0, 0);
 	upVector = Vec3d(0, 1, 0);
 }
@@ -163,7 +161,7 @@ void display_callback(void)
 	glColor3ub(0, 0, 0);
 	glRasterPos2f(-14.5, 14);
 	if (show_Fossa)
-		drawString("Foosa Slice");
+		drawString("Fosa Slice");
 	else if (show_TMJ)
 		drawString("TMJ Slice");
 	drawString(str);
@@ -212,7 +210,7 @@ void display_callback(void)
 	//annotation
 	glColor3ub(0, 0, 0);
 	glRasterPos2f(10.0f, viewportheight - 20);
-	drawString("TMJ + Foosa");
+	drawString("TMJ + Fossa + Tubercle");
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -335,10 +333,11 @@ void display_callback(void)
 
 	if (sur_out)
 	{
+		cout << "output file success" << endl;
 		sur_out = false;
-		TMJ.OutFile("TMJHead_quad.txt", 0);
-		Fossa.OutFile("Fossa_quad.txt", 1);
-		Tubercle.OutFile("Tubercle_quad.txt", 1);
+		TMJ.OutFile("TMJHead_quad.qda", 0);
+		Fossa.OutFile("Fossa_quad.qda", 1);
+		Tubercle.OutFile("Tubercle_quad.qda", 1);
 	}
 	glutSwapBuffers();
 }

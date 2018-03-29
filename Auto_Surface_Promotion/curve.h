@@ -1,6 +1,14 @@
 #include <vector>
 #include "viewport.h"
 #include <Eigen/Dense>
+#include <iostream>
+#include <stdlib.h>
+#include <math.h>
+#include <float.h>
+#include <fstream>
+#include <GL/freeglut.h>
+
+using namespace std;
 
 using namespace Eigen;
 #ifndef _CURVE_H_
@@ -71,8 +79,8 @@ public:
 	void SetMinz(REAL y_start, REAL y_end, Point3 *min);
 
 	/*Set maxcur[2] and mincur[2]*/
-	void SetMaxzCurve(bool upz, bool update);
-	void SetMinzCurve(bool upz, bool update);
+	void SetMaxzCurve(bool upz);
+	void SetMinzCurve(bool upz);
 	void SetCurvePt(CubicBezierCurve* cur, Point3 start, Point3 middle, Point3 end);
 	void SetCurvePt_Mat(CubicBezierCurve* cur, REAL x, int start_index, int end_index, bool max);
 	void DrawResultPt();

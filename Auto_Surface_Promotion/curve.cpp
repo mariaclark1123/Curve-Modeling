@@ -2,15 +2,6 @@
 #pragma warning(disable:4996)
 
 #include "curve.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <float.h>
-#include <fstream>
-#include <iostream>
-#include <GL/freeglut.h>
-
-using namespace std;
 
 #define SET_VECTOR2(V, V1, V2)          do { (V)[X] = (V1); (V)[Y] = (V2); } while (0)
 #define SET_VECTOR3(V, V1, V2, V3)          do { (V)[X] = (V1); (V)[Y] = (V2); (V)[Z] = (V3);} while (0)
@@ -240,11 +231,16 @@ void BicubicBezierSurface::DrawSurface3D()
 }
 
 /*Model*/
-void Model::SetInfo(char *filename)
+void Model::SetInfo(char *filename)  //Find divide y coordinate if need divide
 {
 	int count = 0, count1 = 0, cv = 0;
 	REAL f1, f2, f3, ymin, ymax;
 	char buffer[256];
+	
+	//store each y slice's maxx and minx
+	REAL line[8][2];
+	REAL arry[8];
+
 	fstream outfile;
 	outfile.open(filename);
 
@@ -284,7 +280,58 @@ void Model::SetInfo(char *filename)
 			}
 		}
 	}
+	//Set divide_y when divide
 	this->divide_y = (ymax + ymin) / 2.0;
+
+	//Search x interval
+	REAL inter = (ymax - ymin) / 9.0;
+	REAL xmax, xmin;
+	for (int i = 1; i < 9; i++)
+	{
+		//Set arry's value
+		arry[i - 1] = ymin + inter * i;
+	}
+
+	//int count_line[8] = { 0 };
+	//for (int i = 0; i < cv; i++)
+	//{
+	//	for (int j = 0; j < 8; j++)
+	//	{
+	//		if (fabs(this->vertex[i][Y] - arry[j]) < 0.1)
+	//		{
+	//			//init
+	//			if (count_line[j] == 0)
+	//			{
+	//				//Set x coordinate
+	//				line[j][0] = this->vertex[i][X];
+	//				line[j][1] = this->vertex[i][X];
+	//				count_line[j] = 1;
+	//			}
+	//			else
+	//			{
+	//				if (this->vertex[i][X] < line[j][0])
+	//					line[j][0] = this->vertex[i][X];
+	//				if (this->vertex[i][X] > line[j][1])
+	//					line[j][1] = this->vertex[i][X];
+	//			}
+	//		}	
+	//	}
+	//}
+	//xmin = line[0][0];
+	//xmax = line[0][1];
+	//for (int j = 1; j < 8; j++)
+	//{
+	//	if (xmin > line[j][0])
+	//		xmin = line[j][0];
+	//	if (xmax < line[j][1])
+	//		xmax = line[j][1];
+	//}
+	////Set this->interval
+	//this->interval = (xmax - xmin) / ((this->slice_num)* 1.0);
+
+	//for (int i = 0; i < 8; i++)
+	//	printf("interval is: %f", this->interval);
+	
 	outfile.close();
 }
 
@@ -317,7 +364,7 @@ void Model::InitModel(char *filename, bool divide)
 					this->vertex[cv][X] = f1 + move_x;
 					this->vertex[cv][Y] = f2 + move_y;
 					this->vertex[cv][Z] = f3 + move_z;
-
+				
 					/*init max_x and min_x*/
 					if (cv == 0)
 					{
@@ -337,6 +384,7 @@ void Model::InitModel(char *filename, bool divide)
 		}
 		else  //if need to divide in y coordiante
 		{
+			//find each y coordinate 
 			if (buffer[0] == 'v')
 			{
 				if (buffer[1] == ' ') //vertex:v ***
@@ -402,7 +450,6 @@ void Model::InitModel(char *filename, bool divide)
 			this->face[cf][0] = i1 - 1;
 			this->face[cf][1] = i3 - 1;
 			this->face[cf][2] = i5 - 1;
-
 			cf++;
 		}
 	}
@@ -425,7 +472,7 @@ void Model::InitModel(char *filename, bool divide)
 
 	interval = (this->max_x[X] - this->min_x[X]) / ((this->slice_num )* 1.0);
 	
-		//Set texture
+	//Set texture
 	for (int i = 0; i < cv; i++)
 	{
 		Vec3d n = Vec3d(vertex[i][X], vertex[i][Y], vertex[i][Z]);
@@ -434,7 +481,6 @@ void Model::InitModel(char *filename, bool divide)
 		texture[i][0] = (n.x / sum + 1) / 2;
 		texture[i][1] = (-n.y / sum + 1) / 2;
 	}
-
 
 	cout << "--------------------------" << endl;
 	cout << filename << "'s information:" << endl;
@@ -520,7 +566,6 @@ void Model::SetSlice()
 				}
 			}
 		}
-
 		this->all_slice[count].v_num = res_num;
 		this->all_slice[count].index = count;
 		this->all_slice[count].cur_x = cur_x;
@@ -529,7 +574,7 @@ void Model::SetSlice()
 		this->all_slice[count].SetSliceCurve();
 		/*Set minz vertex and maxz vertex*/
 		this->all_slice[count].SetSliceMM();
-		this->all_slice[count].SetMaxzCurve(true, true);
+		this->all_slice[count].SetMaxzCurve(true);
 	//	this
 
 	}
@@ -540,7 +585,6 @@ void Model::Divide_SetSlice(bool upy, REAL* FT_inter)
 {
 	REAL ratio;
 	REAL inters_y, inters_z;
-
 	int res_num;
 
 	/*All slice setting*/
@@ -567,21 +611,20 @@ void Model::Divide_SetSlice(bool upy, REAL* FT_inter)
 					ratio = (cur_x * 1.0 - this->vertex[this->face[i][j]][X]) / (1.0 * this->vertex[this->face[i][(j + 1) % 3]][X] - 1.0 * this->vertex[this->face[i][j]][X]);
 					inters_y = this->vertex[this->face[i][j]][Y] + ratio * (this->vertex[this->face[i][(j + 1) % 3]][Y] - this->vertex[this->face[i][j]][Y]);
 					inters_z = this->vertex[this->face[i][j]][Z] + ratio * (this->vertex[this->face[i][(j + 1) % 3]][Z] - this->vertex[this->face[i][j]][Z]);
-
+				
 					if (upy)
 					{
-						if (inters_y > divide_y - *FT_inter)
+						if (inters_y >= divide_y - *FT_inter)
 						{
 							this->all_slice[count].vertex[res_num][X] = cur_x;
 							this->all_slice[count].vertex[res_num][Y] = inters_y;
 							this->all_slice[count].vertex[res_num][Z] = inters_z;
 							res_num++;
-
 						}
 					}
 					if (!upy)
 					{
-						if (inters_y < divide_y + *FT_inter)
+						if (inters_y <= divide_y + *FT_inter)
 						{
 							this->all_slice[count].vertex[res_num][X] = cur_x;
 							this->all_slice[count].vertex[res_num][Y] = inters_y;
@@ -600,8 +643,7 @@ void Model::Divide_SetSlice(bool upy, REAL* FT_inter)
 		this->all_slice[count].SetSliceCurve();
 		/*Set minz vertex and maxz vertex*/
 		this->all_slice[count].SetSliceMM();
-	//	this->all_slice[count].SetMaxzCurve(upy);
-		this->all_slice[count].SetMinzCurve(upy, true);
+		this->all_slice[count].SetMinzCurve(upy);
 	}
 }
 
@@ -814,7 +856,7 @@ void Model::OutFile(char *name, int index)
 		}
 		out3.close();
 	}*/
-	ofstream out4(name);
+	/*ofstream out4(name);
 	if (out4.is_open())
 	{
 		out4 << "This is " << name << " Model file in array shape" << endl;
@@ -848,7 +890,54 @@ void Model::OutFile(char *name, int index)
 			out4 << endl;
 		}
 		out4.close();
+	}*/
+ofstream out5(name);
+if (out5.is_open())
+{
+	out5 << 8 << endl;
+	//Format
+	// index row, column
+	//u -1 n
+	//l -1 n
+	//d -1 n
+	//r -1 n
+	out5 << "This is " << name << " Model file in array shape" << endl;
+
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 2; j++)
+		{
+			out5 << i * 2 + j << " " << RES + 1 << " " << RES + 1 << endl;
+			out5 << "u " << -1 << " " << "n" << endl;
+			out5 << "l " << -1 << " " << "n" << endl;
+			out5 << "d " << -1 << " " << "n" << endl;
+			out5 << "r " << -1 << " " << "n" << endl;
+//			out5 << "Patch(17*17)[" << i << "][" << j << "]:" << endl;
+			for (int m = 0; m <= RES; m++)
+			{
+		//		out5 << "Row." << m << endl;
+				for (int n = 0; n <= RES; n++)
+				{
+					if (index == 0)
+					{
+						out5 << this->maxz_sur[i][j].points[m][n][X] - move_x << " ";
+						out5 << this->maxz_sur[i][j].points[m][n][Y] - move_y << " ";
+						out5 << this->maxz_sur[i][j].points[m][n][Z] - move_z << endl;
+					}
+					else if (index == 1)
+					{
+						out5 << this->minz_sur[i][j].points[m][n][X] - move_x << " ";
+						out5 << this->minz_sur[i][j].points[m][n][Y] - move_y << " ";
+						out5 << this->minz_sur[i][j].points[m][n][Z] - move_z << endl;
+					}
+				}
+			//	out5 << endl;
+			}
+			out5 << endl;
+		}
 	}
+	out5.close();
+}
 }
 
 /*SliceBoundary*/
@@ -1076,9 +1165,17 @@ void SliceBoundary::SetCurvePt_Mat(CubicBezierCurve* cur, REAL x, int start_inde
 			for (int j = 0; j < 2; j++) //Set y and z coordinates
 			{
 				if (max)
+				{
+					SET_PT3(cur->control_pts[0], x, this->maxz_vertex[start_index][Y], this->maxz_vertex[start_index][Z]);
+					SET_PT3(cur->control_pts[3], x, this->maxz_vertex[end_index][Y], this->maxz_vertex[end_index][Z]);
 					mat_pt(i, j) = this->maxz_vertex[i + start_index][j + 1];   //index from start_index to end_index
+				}
 				else
+				{
+					SET_PT3(cur->control_pts[0], x, this->minz_vertex[start_index][Y], this->minz_vertex[start_index][Z]);
+					SET_PT3(cur->control_pts[3], x, this->minz_vertex[end_index][Y], this->minz_vertex[end_index][Z]);
 					mat_pt(i, j) = this->minz_vertex[i + start_index][j + 1];   //index from start_index to end_index
+				}
 			}
 		}
 		mat_trans = mat.transpose();
@@ -1088,17 +1185,16 @@ void SliceBoundary::SetCurvePt_Mat(CubicBezierCurve* cur, REAL x, int start_inde
 		mat_ctrl = mat_res_inver * mat_respt;
 
 		//Set control points to curves
-		for (int j = 0; j < 4; j++)
+		for (int j = 1; j < 3; j++)
 		{
 			SET_PT3(cur->control_pts[j], x, mat_ctrl(j, 0), mat_ctrl(j, 1));
 		}
 	}
-	
 }
 
 //Set maxzcurve to curve
 /*Fossa needs curve directed upz, Tubercle needs curve directed downz*/
-void SliceBoundary::SetMaxzCurve(bool upz, bool update)
+void SliceBoundary::SetMaxzCurve(bool upz)
 {
 	Point3 start[2], middle[2], end[2], ctrlp_2[2], ctrlp_3[2];
 	REAL y_max, ymax_z, y_min, ymin_z, z_max, zmax_y, z_min, zmin_y, x;
@@ -1133,87 +1229,59 @@ void SliceBoundary::SetMaxzCurve(bool upz, bool update)
 			ymin_z = this->maxz_vertex[i][Z];
 		}
 	}
-	/*if directed upz*/
-	if (!update)
+	if (upz)
 	{
-		if (upz)
+		if (index_maxz < 3)
 		{
-			SET_PT3(start[0], x, ymin, ymin_z);
-			SET_PT3(middle[0], x, ymin, z_max);
+		//	printf("index_maxz < 3\n");
+			SET_PT3(start[0], x, y_min, ymin_z);
+			SET_PT3(middle[0], x, y_min, z_max);
 			SET_PT3(end[0], x, zmax_y, z_max);
-			SET_PT3(start[1], x, zmax_y, z_max);
-			SET_PT3(middle[1], x, ymax, z_max);
-			SET_PT3(end[1], x, ymax, ymax_z);
-
-			for (int i = 0; i < 2; i++) {
-				this->SetCurvePt(&this->cur_maxz[i], start[i], middle[i], end[i]);
-			}
+			this->SetCurvePt(&this->cur_maxz[0], start[0], middle[0], end[0]);
 		}
-		else
+		else {
+		//	printf("matrix curve setting\n");
+			this->SetCurvePt_Mat(&this->cur_maxz[0], x, 0, index_maxz, true);
+		}
+		if (10 - index_maxz < 3)
 		{
-			SET_PT3(start[0], x, ymin, ymin_z);
-			SET_PT3(middle[0], x, ymin, z_min);
-			SET_PT3(end[0], x, zmin_y, z_min);
-			SET_PT3(start[1], x, zmin_y, z_min);
-			SET_PT3(middle[1], x, ymax, z_min);
-			SET_PT3(end[1], x, ymax, ymax_z);
-
-			for (int i = 0; i < 2; i++) {
-				this->SetCurvePt(&this->cur_maxz[i], start[i], middle[i], end[i]);
-			}
+		//	printf("10 - index_maxz < 3\n");
+			SET_PT3(start[1], x, zmax_y, z_max);
+			SET_PT3(middle[1], x, y_max, z_max);
+			SET_PT3(end[1], x, y_max, ymax_z);
+			this->SetCurvePt(&this->cur_maxz[1], start[1], middle[1], end[1]);
+		}
+		else {
+		//	printf("matrix curve setting\n");
+			this->SetCurvePt_Mat(&this->cur_maxz[1], x, index_maxz, 10, true);
 		}
 	}
 	else
 	{
-		if (upz)
+		if (index_minz < 3)
 		{
-			if (index_maxz < 3)
-			{
-				SET_PT3(start[0], x, ymin, ymin_z);
-				SET_PT3(middle[0], x, ymin, z_max);
-				SET_PT3(end[0], x, zmax_y, z_max);
-				this->SetCurvePt(&this->cur_maxz[0], start[0], middle[0], end[0]);
-			}
-			else
-				this->SetCurvePt_Mat(&this->cur_maxz[0], x, 0, index_maxz, true);
-
-			if (10 - index_maxz < 3)
-			{
-				SET_PT3(start[1], x, zmin_y, z_max);
-				SET_PT3(middle[1], x, ymax, z_max);
-				SET_PT3(end[1], x, ymax, ymax_z);
-				this->SetCurvePt(&this->cur_maxz[1], start[1], middle[1], end[1]);
-			}
-			else
-				this->SetCurvePt_Mat(&this->cur_maxz[1], x, index_maxz, 10, true);
+			SET_PT3(start[0], x, y_min, ymin_z);
+			SET_PT3(middle[0], x, y_min, z_min);
+			SET_PT3(end[0], x, zmin_y, z_min);
+			this->SetCurvePt(&this->cur_maxz[0], start[0], middle[0], end[0]);
 		}
 		else
-		{
-			if (index_minz < 3)
-			{
-				SET_PT3(start[0], x, ymin, ymin_z);
-				SET_PT3(middle[0], x, ymin, z_min);
-				SET_PT3(end[0], x, zmin_y, z_min);
-				this->SetCurvePt(&this->cur_maxz[0], start[0], middle[0], end[0]);
-			}
-			else
-				this->SetCurvePt_Mat(&this->cur_maxz[0], x, 0, index_minz, true);
+			this->SetCurvePt_Mat(&this->cur_maxz[0], x, 0, index_minz, true);
 
-			if (10 - index_minz < 3)
-			{
-				SET_PT3(start[1], x, zmin_y, z_min);
-				SET_PT3(middle[1], x, ymax, z_min);
-				SET_PT3(end[1], x, ymax, ymax_z);
-				this->SetCurvePt(&this->cur_maxz[1], start[1], middle[1], end[1]);
-			}
-			else
-				this->SetCurvePt_Mat(&this->cur_maxz[1], x, index_minz, 10, true);
+		if (10 - index_minz < 3)
+		{
+			SET_PT3(start[1], x, zmin_y, z_min);
+			SET_PT3(middle[1], x, y_max, z_min);
+			SET_PT3(end[1], x, y_max, ymax_z);
+			this->SetCurvePt(&this->cur_maxz[1], start[1], middle[1], end[1]);
 		}
+		else
+			this->SetCurvePt_Mat(&this->cur_maxz[1], x, index_minz, 10, true);
 	}
 }
 
 /*TMJ directed in downz*/
-void SliceBoundary::SetMinzCurve(bool upz, bool update)
+void SliceBoundary::SetMinzCurve(bool upz)
 {
 	REAL y_max, ymax_z, y_min, ymin_z, z_max, zmax_y, z_min, zmin_y, x;
 	int index_maxz = 0, index_minz = 0;  //Find maxz's index, divide the 11 points to two parts
@@ -1247,82 +1315,49 @@ void SliceBoundary::SetMinzCurve(bool upz, bool update)
 			ymin_z = this->minz_vertex[i][Z];
 		}
 	}
-
-	if (!update)
+	if (upz)
 	{
-		if (upz)
+		if (index_maxz < 3)
 		{
-			SET_PT3(start[0], x, ymin, ymin_z);
-			SET_PT3(middle[0], x, ymin, z_max);
+			SET_PT3(start[0], x, y_min, ymin_z);
+			SET_PT3(middle[0], x, y_min, z_max);
 			SET_PT3(end[0], x, zmax_y, z_max);
-			SET_PT3(start[1], x, zmax_y, z_max);
-			SET_PT3(middle[1], x, ymax, z_max);
-			SET_PT3(end[1], x, ymax, ymax_z);
-
-			for (int i = 0; i < 2; i++) {
-				this->SetCurvePt(&this->cur_minz[i], start[i], middle[i], end[i]);
-			}
+			this->SetCurvePt(&this->cur_minz[0], start[0], middle[0], end[0]);
 		}
 		else
-		{
-			SET_PT3(start[0], x, ymin, ymin_z);
-			SET_PT3(middle[0], x, ymin, z_min);
-			SET_PT3(end[0], x, zmin_y, z_min);
-			SET_PT3(start[1], x, zmin_y, z_min);
-			SET_PT3(middle[1], x, ymax, z_min);
-			SET_PT3(end[1], x, ymax, ymax_z);
+			this->SetCurvePt_Mat(&this->cur_minz[0], x, 0, index_maxz, false);
 
-			for (int i = 0; i < 2; i++) {
-				this->SetCurvePt(&this->cur_minz[i], start[i], middle[i], end[i]);
-			}
+		if (10 - index_maxz < 3)
+		{
+			SET_PT3(start[1], x, zmax_y, z_max);
+			SET_PT3(middle[1], x, y_max, z_max);
+			SET_PT3(end[1], x, y_max, ymax_z);
+			this->SetCurvePt(&this->cur_minz[1], start[1], middle[1], end[1]);
 		}
+		else
+			this->SetCurvePt_Mat(&this->cur_minz[1], x, index_maxz, 10, false);
 	}
 	else
 	{
-		if (upz)
+		if (index_minz < 3)
 		{
-			if (index_maxz < 3)
-			{
-				SET_PT3(start[0], x, ymin, ymin_z);
-				SET_PT3(middle[0], x, ymin, z_max);
-				SET_PT3(end[0], x, zmax_y, z_max);
-				this->SetCurvePt(&this->cur_minz[0], start[0], middle[0], end[0]);
-			}
-			else
-				this->SetCurvePt_Mat(&this->cur_minz[0], x, 0, index_maxz, false);
-
-			if (10 - index_maxz < 3)
-			{
-				SET_PT3(start[1], x, zmax_y, z_max);
-				SET_PT3(middle[1], x, ymax, z_max);
-				SET_PT3(end[1], x, ymax, ymax_z);
-				this->SetCurvePt(&this->cur_minz[1], start[1], middle[1], end[1]);
-			}
-			else
-				this->SetCurvePt_Mat(&this->cur_minz[1], x, index_maxz, 10, false);
+			SET_PT3(start[0], x, y_min, ymin_z);
+			SET_PT3(middle[0], x, y_min, z_min);
+			SET_PT3(end[0], x, zmin_y, z_min);
+			this->SetCurvePt(&this->cur_minz[0], start[0], middle[0], end[0]);
 		}
 		else
-		{
-			if (index_minz < 3)
-			{
-				SET_PT3(start[0], x, ymin, ymin_z);
-				SET_PT3(middle[0], x, ymin, z_min);
-				SET_PT3(end[0], x, zmin_y, z_min);
-				this->SetCurvePt(&this->cur_minz[0], start[0], middle[0], end[0]);
-			}
-			else
-				this->SetCurvePt_Mat(&this->cur_minz[0], x, 0, index_minz, false);
+			this->SetCurvePt_Mat(&this->cur_minz[0], x, 0, index_minz, false);
 
-			if (10 - index_minz < 3)
-			{
-				SET_PT3(start[1], x, zmin_y, z_min);
-				SET_PT3(middle[1], x, ymax, z_min);
-				SET_PT3(end[1], x, ymax, ymax_z);
-				this->SetCurvePt(&this->cur_minz[1], start[1], middle[1], end[1]);
-			}
-			else
-				this->SetCurvePt_Mat(&this->cur_minz[1], x, index_minz, 10, false);
+		if (10 - index_minz < 3)
+		{
+			SET_PT3(start[1], x, zmin_y, z_min);
+			SET_PT3(middle[1], x, y_max, z_min);
+			SET_PT3(end[1], x, y_max, ymax_z);
+			this->SetCurvePt(&this->cur_minz[1], start[1], middle[1], end[1]);
 		}
+		else
+			this->SetCurvePt_Mat(&this->cur_minz[1], x, index_minz, 10, false);
 	}
 }
 
