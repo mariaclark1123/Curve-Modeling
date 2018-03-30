@@ -395,7 +395,7 @@ void Model::InitModel(char *filename, bool divide)
 					this->vertex[cv][Y] = f2 + move_y;
 					this->vertex[cv][Z] = f3 + move_z;
 
-					if (divide_y > this->vertex[cv][Y])	//Search part which y<stand_y
+					if (divide_y >= this->vertex[cv][Y])	//Search part which y<stand_y
 					{
 						if (count1 == 0)
 						{
@@ -497,8 +497,6 @@ void Model::InitModel(char *filename, bool divide)
 void Model::DrawModel()
 {
 	glEnable(GL_TEXTURE_2D);
-//	glColor3f(0.8, 0.8, 0.8);
-
 	for (int i = 0; i < f_num; i++)
 	{
 		glBegin(GL_TRIANGLES);
@@ -575,12 +573,11 @@ void Model::SetSlice()
 		/*Set minz vertex and maxz vertex*/
 		this->all_slice[count].SetSliceMM();
 		this->all_slice[count].SetMaxzCurve(true);
-	//	this
-
 	}
 }
 
 //For fossa and tubercle
+//Divide at index10, divide the convex and concave part into 4 surface
 void Model::Divide_SetSlice(bool upy, REAL* FT_inter)
 {
 	REAL ratio;
@@ -639,7 +636,7 @@ void Model::Divide_SetSlice(bool upy, REAL* FT_inter)
 		this->all_slice[count].index = count;
 		this->all_slice[count].cur_x = cur_x;
 
-		/*set slice's 4 cur*/
+		/*set whole slice's 4 cur*/
 		this->all_slice[count].SetSliceCurve();
 		/*Set minz vertex and maxz vertex*/
 		this->all_slice[count].SetSliceMM();
@@ -1060,18 +1057,17 @@ void SliceBoundary::SetMaxz(REAL y_start, REAL y_end, Point3 *max)
 	int count = 0;
 
 	/*draw divide lines*/
-	glColor3f(1.0, 0.0, 0.0);
+	/*glColor3f(1.0, 0.0, 0.0);
 	glBegin(GL_LINES);
 	glVertex3f(this->cur_x, y_start, -5);
 	glVertex3f(this->cur_x, y_start, 5);
 
 	glVertex3f(this->cur_x, y_end, -5);
 	glVertex3f(this->cur_x, y_end, 5);
-	glEnd();
+	glEnd();*/
 
 	for (int i = 0; i < this->v_num; i++)
 	{
-
 		if ((this->vertex[i][Y] > y_start) && (this->vertex[i][Y] < y_end))
 		{
 			if (count == 0)
